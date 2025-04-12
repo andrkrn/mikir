@@ -25,14 +25,14 @@ jobs:
       - name: Sanitize issue title
         id: sanitize
         run: |
-          echo "::set-output name=safe_title::$(echo '${{ github.event.issue.title }}' | tr -cd '[:alnum:]-_')"
+          echo "SAFE_TITLE=$(echo '${{ github.event.issue.title }}' | tr -cd '[:alnum:]-_')" >> $GITHUB_ENV
 
       - name: Handle title change
         if: github.event.action == 'edited'
         run: |
           ISSUE_NUMBER=${{ github.event.issue.number }}
-          OLD_TITLE=$(git log -1 --pretty=%B | grep -oP "(?<=issue #${ISSUE_NUMBER}: ).*")
-          NEW_TITLE=${{ steps.sanitize.outputs.safe_title }}
+          OLD_TITLE=$(git log -1 --pretty=%B | sed -n "s/.*issue #${ISSUE_NUMBER}: \(.*\)/\1/p")
+          NEW_TITLE=$SAFE_TITLE
 
           if [ "$OLD_TITLE" != "$NEW_TITLE" ]; then
             OLD_FILE="doc/${ISSUE_NUMBER}-${OLD_TITLE}.md"
