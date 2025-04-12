@@ -1,0 +1,58 @@
+name: Issue Folder Creation
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  create-folder:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sanitize issue title
+        id: sanitize
+        run: |
+          echo "::set-output name=safe_title::$(echo '${{ github.event.issue.title }}' | tr -cd '[:alnum:]-_')"
+
+      - name: Handle title change
+        if: github.event.action == 'edited'
+        run: |
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          OLD_TITLE=$(git log -1 --pretty=%B | grep -oP "(?<=issue #${ISSUE_NUMBER}: ).*")
+          NEW_TITLE=${{ steps.sanitize.outputs.safe_title }}
+
+          if [ "$OLD_TITLE" != "$NEW_TITLE" ]; then
+            OLD_FILE="doc/${ISSUE_NUMBER}-${OLD_TITLE}.md"
+            NEW_FILE="doc/${ISSUE_NUMBER}-${NEW_TITLE}.md"
+
+            if [ -f "$OLD_FILE" ]; then
+              mv "$OLD_FILE" "$NEW_FILE"
+              git config user.name "github-actions"
+              git config user.email "github-actions@github.com"
+              git add "$OLD_FILE" "$NEW_FILE"
+              git commit -m "Rename documentation file for issue #${ISSUE_NUMBER}: $NEW_TITLE"
+              git push
+            fi
+          fi
+
+      - name: Create file and commit
+        run: |
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          ISSUE_TITLE=${{ steps.sanitize.outputs.safe_title }}
+          FOLDER_PATH="doc/${ISSUE_NUMBER}-${ISSUE_TITLE}.md"
+
+          if [ -f "$FOLDER_PATH" ]; then
+            echo "File $FOLDER_PATH already exists. Skipping creation."
+            exit 0
+          fi
+
+          mkdir -p "doc"
+          touch "$FOLDER_PATH"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add "$FOLDER_PATH"
+          git commit -m "Add documentation file for issue #${ISSUE_NUMBER}: ${{ github.event.issue.title }}"
+          git push
