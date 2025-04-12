@@ -55,8 +55,8 @@ jobs:
       - name: Create file and commit
         run: |
           ISSUE_NUMBER=${{ github.event.issue.number }}
-          ISSUE_TITLE=$SAFE_TITLE
-          ISSUE_BODY=${{ github.event.issue.body }}
+          ISSUE_TITLE="$SAFE_TITLE"
+          ISSUE_BODY="${{ github.event.issue.body }}"
           FOLDER_PATH="doc/${ISSUE_NUMBER}-${ISSUE_TITLE}.md"
 
           if [ -f "$FOLDER_PATH" ]; then
